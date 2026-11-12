@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ninjago: Speed Karts Turbo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap');
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #0d0f12;
+            color: #fff;
+        }
+
+        .font-bangers { font-family: 'Bangers', cursive; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: #e11d48; border-radius: 3px; }
+
+        .ninja-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .ninja-card:hover {
+            transform: translateY(-6px) scale(1.02);
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .touch-btn {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .touch-btn:active {
+            background-color: rgba(245, 158, 11, 0.5);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden bg-black text-white select-none">
+
+    <!-- CANVAS THREE.JS -->
+    <div id="canvas-container"></div>
+
+    <!-- UI OVERLAY MAIN CONTAINER -->
+    <div id="ui-layer" class="relative z-10 w-full h-full pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+
+        <!-- MENU DE SELEÇÃO (OVERLAY INICIAL) -->
+        <div id="main-menu" class="pointer-events-auto absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col justify-between p-4 md:p-8 overflow-y-auto">
+            <!-- Header -->
+            <div class="text-center my-2">
+                <h1 class="font-bangers text-5xl sm:text-7xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-400 to-red-600 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">
+                    NINJAGO <span class="text-white">SPEED KARTS</span>
+                </h1>
+                <p class="font-orbitron text-xs sm:text-sm text-slate-400 tracking-widest mt-1">ESCOLHA SEU NINJA E DOMINE OS ELEMENTOS NA PISTA!</p>
+            </div>
+
+            <!-- Seleção de Personagem -->
+            <div class="max-w-6xl mx-auto w-full my-auto">
+                <h2 class="text-lg sm:text-xl font-bold font-orbitron text-amber-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-user-ninja"></i> 1. SELECIONE SEU NINJA
+                </h2>
+                <div id="ninja-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
+                    <!-- Cards de personagens renderizados dinamicamente via JS -->
+                </div>
+
+                <!-- Detalhes do Ninja Selecionado -->
+                <div id="character-detail" class="glass-panel p-4 rounded-xl border border-amber-500/30 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div id="char-icon-bg" class="w-16 h-16 rounded-xl flex items-center justify-center text-3xl font-bold shadow-lg border">
+                            <i id="char-icon" class="fa-solid fa-mask"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 id="char-name" class="font-bangers text-2xl text-amber-400">KAI</h3>
+                                <span id="char-element" class="text-xs font-orbitron px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-700/50">FOGO</span>
+                            </div>
+                            <p id="char-desc" class="text-xs text-slate-300 max-w-md mt-1">Ninja do Fogo. Seu kart tem grande aceleração e sua habilidade lança uma onda flamejante de impulso!</p>
+                        </div>
+                    </div>
+                    <!-- Status do Kart -->
+                    <div class="w-full md:w-64 space-y-2 text-xs font-orbitron">
+                        <div>
+                            <div class="flex justify-between text-slate-300 mb-0.5"><span>VELOCIDADE</span><span id="stat-speed">85%</span></div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div id="bar-speed" class="bg-amber-400 h-full w-[85%] rounded-full"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-slate-300 mb-0.5"><span>ACELERAÇÃO</span><span id="stat-accel">90%</span></div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div id="bar-accel" class="bg-red-500 h-full w-[90%] rounded-full"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-slate-300 mb-0.5"><span>CURVA / MANUSEIO</span><span id="stat-handling">75%</span></div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div id="bar-handling" class="bg-sky-400 h-full w-[75%] rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seleção de Pista -->
+                <h2 class="text-lg sm:text-xl font-bold font-orbitron text-amber-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot"></i> 2. SELECIONE A PISTA
+                </h2>
+                <div id="track-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <!-- Tracks JS populated -->
+                </div>
+            </div>
+
+            <!-- Botão Iniciar -->
+            <div class="text-center my-4">
+                <button id="btn-start-game" onclick="startGame()" class="relative inline-flex items-center justify-center px-8 py-3 text-xl sm:text-2xl font-bangers tracking-wider text-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-400 rounded-full shadow-[0_0_25px_rgba(245,158,11,0.6)] transform hover:scale-105 transition-all duration-200 cursor-pointer">
+                    <i class="fa-solid fa-flag-checkered mr-3 text-red-600"></i> CORRER AGORA!
+                </button>
+            </div>
+        </div>
+
+        <!-- HUD DA CORRIDA (IN-GAME) -->
+        <div id="hud-layer" class="hidden w-full h-full flex flex-col justify-between pointer-events-none">
+            
+            <!-- Top HUD: Posição, Voltas, Tempo -->
+            <div class="flex justify-between items-start">
+                <!-- Posição -->
+                <div class="glass-panel p-3 sm:p-4 rounded-2xl flex items-center gap-3 border-l-4 border-amber-400 shadow-xl">
+                    <div class="text-3xl sm:text-5xl font-bangers text-amber-400 tracking-wider">
+                        <span id="hud-position">1</span><span class="text-xl sm:text-2xl text-slate-300">/6</span>
+                    </div>
+                    <div class="font-orbitron text-xs text-slate-400">POSIÇÃO</div>
+                </div>
+
+                <!-- Voltas e Cronômetro -->
+                <div class="glass-panel px-5 py-2 sm:py-3 rounded-2xl flex flex-col items-center border-t-2 border-amber-400 shadow-xl">
+                    <div class="text-xs font-orbitron text-slate-400 tracking-widest">VOLTA</div>
+                    <div class="text-2xl sm:text-3xl font-bangers text-white">
+                        <span id="hud-lap">1</span> / <span id="hud-max-laps">3</span>
+                    </div>
+                    <div id="hud-timer" class="font-orbitron text-sm sm:text-base text-amber-300 font-bold mt-0.5">00:00.0</div>
+                </div>
+
+                <!-- Botões de Controle Rápido (Top Right) -->
+                <div class="pointer-events-auto flex gap-2">
+                    <button onclick="restartRace()" class="glass-panel hover:bg-slate-800 text-white p-3 rounded-xl transition border border-slate-700" title="Recomeçar Corrida">
+                        <i class="fa-solid fa-rotate-right text-lg text-amber-400"></i>
+                    </button>
+                    <button onclick="openMenu()" class="glass-panel hover:bg-slate-800 text-white p-3 rounded-xl transition border border-slate-700" title="Menu / Novo Jogo">
+                        <i class="fa-solid fa-house text-lg text-sky-400"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Centro: Aviso de Contagem Regressiva e Mensagem de Habilidade -->
+            <div class="self-center text-center flex flex-col items-center gap-2">
+                <div id="hud-banner" class="font-bangers text-6xl sm:text-8xl text-amber-400 tracking-widest drop-shadow-[0_5px_10px_rgba(0,0,0,0.9)] animate-bounce hidden">
+                    3
+                </div>
+                <div id="ability-banner" class="font-bangers text-2xl sm:text-4xl text-cyan-300 tracking-wider bg-black/70 px-6 py-2 rounded-2xl border border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6)] hidden">
+                    PODER ACTIVADO!
+                </div>
+            </div>
+
+            <!-- Minimapa e Habilidade Especial / Velocidade -->
+            <div class="flex justify-between items-end">
+                <!-- Minimapa Canvas -->
+                <div class="glass-panel p-2 rounded-2xl border border-slate-700/60 shadow-2xl relative overflow-hidden">
+                    <canvas id="minimap-canvas" width="130" height="130" class="rounded-xl bg-slate-950/80"></canvas>
+                </div>
+
+                <!-- Botão de Poder Especial / Habilidade Elementar -->
+            <div class="flex flex-col items-center gap-2 pointer-events-auto">
+                <button id="btn-ability" onclick="triggerSpecialAbility()" class="relative group w-16 h-16 sm:w-20 sm:h-20 rounded-full glass-panel border-2 border-amber-400/80 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.4)] transition hover:scale-105 active:scale-95">
+                    <i id="ability-icon" class="fa-solid fa-bolt text-2xl sm:text-3xl text-amber-400"></i>
+                    <span class="absolute -bottom-6 font-orbitron text-[10px] sm:text-xs text-amber-300 font-bold bg-black/80 px-2 py-0.5 rounded-full border border-amber-500/40">
+                        ESPECIAL [E]
+                    </span>
+                    <!-- Cooldown Overlay Ring -->
+                    <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+                        <circle id="ability-cooldown-circle" cx="50%" cy="50%" r="42%" fill="transparent" stroke="rgba(245,158,11,0.8)" stroke-width="4" stroke-dasharray="200" stroke-dashoffset="0"></circle>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Velocímetro -->
+            <div class="glass-panel p-3 sm:p-4 rounded-2xl border-r-4 border-amber-400 flex flex-col items-end w-32 sm:w-40">
+                <div class="text-[10px] font-orbitron text-slate-400">VELOCIDADE</div>
+                <div class="flex items-baseline gap-1">
+                    <span id="hud-speed" class="font-bangers text-3xl sm:text-4xl text-amber-400">0</span>
+                    <span class="font-orbitron text-xs text-slate-400">KM/H</span>
+                </div>
+                <!-- Barra de Nitro/Velocidade -->
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+                    <div id="hud-speed-bar" class="bg-gradient-to-r from-amber-500 to-red-500 h-full w-0 transition-all duration-75"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles Touch em Dispositivos Móveis -->
+        <div class="md:hidden pointer-events-auto flex justify-between items-center mt-3 pt-2">
+            <div class="flex gap-2">
+                <button id="touch-left" class="touch-btn w-14 h-14 text-2xl text-white"><i class="fa-solid fa-arrow-left"></i></button>
+                <button id="touch-right" class="touch-btn w-14 h-14 text-2xl text-white"><i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+            <div class="flex gap-2">
+                <button id="touch-brake" class="touch-btn w-12 h-12 text-lg text-red-400 border-red-500/40"><i class="fa-solid fa-ban"></i></button>
+                <button id="touch-gas" class="touch-btn w-16 h-16 text-3xl text-green-400 border-green-500/40"><i class="fa-solid fa-gauge-high"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FIM DE CORRIDA -->
+    <div id="finish-modal" class="hidden pointer-events-auto fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl border-2 border-amber-400 max-w-md w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)]">
+            <div id="finish-trophy" class="text-6xl text-amber-400 mb-2"><i class="fa-solid fa-trophy"></i></div>
+            <h2 id="finish-title" class="font-bangers text-4xl sm:text-5xl text-amber-400 tracking-wider">MUITO BEM!</h2>
+            <p id="finish-subtitle" class="font-orbitron text-sm text-slate-300 mt-1">Você terminou a corrida!</p>
+            
+            <div class="my-6 glass-panel p-4 rounded-xl space-y-2 text-left font-orbitron text-sm">
+                <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                    <span class="text-slate-400">Posição Final:</span>
+                    <span id="modal-pos" class="font-bold text-amber-400 text-base">1º Lugar</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                    <span class="text-slate-400">Tempo Total:</span>
+                    <span id="modal-time" class="font-bold text-white">01:45.2</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Personagem:</span>
+                    <span id="modal-char" class="font-bold text-amber-400">Kai</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3 justify-center">
+                <button onclick="restartRace()" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-orbitron font-bold text-sm transition">
+                    <i class="fa-solid fa-rotate-right mr-2 text-amber-400"></i> RECOMEÇAR
+                </button>
+                <button onclick="openMenu()" class="flex-1 py-3 px-4 bg-amber-500 hover:bg-amber-400 text-black font-orbitron font-bold text-sm rounded-xl shadow-lg transition">
+                    <i class="fa-solid fa-flag-checkered mr-2"></i> NOVO JOGO
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- SCRIPT PRINCIPAL DO JOGO -->
+<script>
+    /* =========================================================================
+       DADOS E CONFIGURAÇÕES
+       ========================================================================= */
+    const NINJAS = [
+        {
+            id: 'kai',
+            name: 'Kai',
+            element: 'Fogo',
+            color: 0xef4444,
+            hexColor: '#ef4444',
+            icon: 'fa-fire',
+            desc: 'Ninja do Fogo. Seu kart tem grande aceleração e sua habilidade lança uma onda flamejante de impulso!',
+            stats: { speed: 85, accel: 95, handling: 75 },
+            abilityName: 'Aceleração Flamejante',
+            abilityCooldown: 8
+        },
+        {
+            id: 'jay',
+            name: 'Jay',
+            element: 'Raios',
+            color: 0x3b82f6,
+            hexColor: '#3b82f6',
+            icon: 'fa-bolt',
+            desc: 'Ninja dos Raios. Extremamente rápido nas retas com manuseio ágil e turbo elétrico!',
+            stats: { speed: 95, accel: 80, handling: 80 },
+            abilityName: 'Turbo Elétrico',
+            abilityCooldown: 7
+        },
+        {
+            id: 'zane',
+            name: 'Zane',
+            element: 'Gelo',
+            color: 0x38bdf8,
+            hexColor: '#38bdf8',
+            icon: 'fa-snowflake',
+            desc: 'Nindroid do Gelo. Excelente controle de curva e estabilidade total na pista.',
+            stats: { speed: 80, accel: 80, handling: 95 },
+            abilityName: 'Congelamento Ninja',
+            abilityCooldown: 9
+        },
+        {
+            id: 'cole',
+            name: 'Cole',
+            element: 'Terra',
+            color: 0xeab308,
+            hexColor: '#eab308',
+            icon: 'fa-mountain',
+            desc: 'Ninja da Terra. Kart pesado e resistente que mantém grande estabilidade.',
+            stats: { speed: 90, accel: 85, handling: 70 },
+            abilityName: 'Terremoto de Impacto',
+            abilityCooldown: 10
+        },
+        {
+            id: 'lloyd',
+            name: 'Lloyd',
+            element: 'Energia',
+            color: 0x22c55e,
+            hexColor: '#22c55e',
+            icon: 'fa-dragon',
+            desc: 'Ninja Verde Lendário. Atributos equilibrados com a habilidade Spinjitzu Supremo!',
+            stats: { speed: 90, accel: 90, handling: 90 },
+            abilityName: 'Spinjitzu Supremo',
+            abilityCooldown: 10
+        },
+        {
+            id: 'nya',
+            name: 'Nya',
+            element: 'Água',
+            color: 0x06b6d4,
+            hexColor: '#06b6d4',
+            icon: 'fa-water',
+            desc: 'Ninja da Água. Alta fluidez nas curvas e recuperação rápida de velocidade.',
+            stats: { speed: 85, accel: 85, handling: 90 },
+            abilityName: 'Tsunami Veloz',
+            abilityCooldown: 8
+        }
+    ];
+
+    const TRACKS = [
+        {
+            id: 'monastery',
+            name: 'Templo Spinjitzu',
+            difficulty: 'Fácil',
+            location: 'Montanhas Ninja',
+            length: '1.2 km',
+            skyColor: 0x87ceeb,
+            groundColor: 0x2e7d32,
+            barrierColor: 0xd97706,
+            desc: 'Uma pista tradicional cercada pelas montanhas ninjas com belas curvas fluidas.'
+        },
+        {
+            id: 'ninjagocity',
+            name: 'Ninjago City Neon',
+            difficulty: 'Médio',
+            location: 'Centro Urbano',
+            length: '1.8 km',
+            skyColor: 0x090d16,
+            groundColor: 0x1e293b,
+            barrierColor: 0x06b6d4,
+            desc: 'Corra sob as luzes neon dos arranha-céus futuristas de Ninjago City.'
+        },
+        {
+            id: 'volcano',
+            name: 'Lair de Garmadon',
+            difficulty: 'Difícil',
+            location: 'Vulcão em Erupção',
+            length: '2.1 km',
+            skyColor: 0x450a0a,
+            groundColor: 0x18181b,
+            barrierColor: 0xef4444,
+            desc: 'Um vulcão perigoso com rochas ardentes e pistas desafiadoras.'
+        }
+    ];
+
+    // Estado Global
+    let selectedNinja = NINJAS[0];
+    let selectedTrack = TRACKS[0];
+
+    let scene, camera, renderer;
+    let playerKart, aiKarts = [];
+    let trackWaypoints = [];
+    let trackCurve = null;
+
+    let isRacing = false;
+    let raceCountdown = false;
+    let raceStartTime = 0;
+    let raceElapsedTime = 0;
+    let lastAbilityTime = 0;
+
+    const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, KeyW: false, KeyS: false, KeyA: false, KeyD: false };
+    const trackWidth = 18;
+    const maxBoundaryDist = (trackWidth / 2) - 1.1; // Margem rigorosa do kart à borda da pista
+
+    /* =========================================================================
+       DECLARAÇÃO DAS FUNÇÕES GLOBAIS DE INTERFACE
+       ========================================================================= */
+    window.startGame = function startGame() {
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('hud-layer').classList.remove('hidden');
+        document.getElementById('finish-modal').classList.add('hidden');
+
+        buildTrackAndEnvironment();
+        setupRaceEntities();
+        startCountdown();
+    };
+
+    window.restartRace = function restartRace() {
+        document.getElementById('finish-modal').classList.add('hidden');
+        window.startGame();
+    };
+
+    window.openMenu = function openMenu() {
+        isRacing = false;
+        document.getElementById('main-menu').classList.remove('hidden');
+        document.getElementById('hud-layer').classList.add('hidden');
+        document.getElementById('finish-modal').classList.add('hidden');
+    };
+
+    window.selectNinja = function selectNinja(id) {
+        selectedNinja = NINJAS.find(n => n.id === id);
+        document.querySelectorAll('.ninja-card').forEach(el => {
+            el.classList.remove('border-amber-400', 'bg-amber-500/10');
+            el.classList.add('border-slate-800');
+        });
+        const card = document.getElementById(`card-${id}`);
+        if (card) {
+            card.classList.remove('border-slate-800');
+            card.classList.add('border-amber-400', 'bg-amber-500/10');
+        }
+        updateNinjaDetails();
+    };
+
+    window.selectTrack = function selectTrack(id) {
+        selectedTrack = TRACKS.find(t => t.id === id);
+        TRACKS.forEach(t => {
+            const el = document.getElementById(`track-${t.id}`);
+            if (el) {
+                el.classList.remove('border-amber-400', 'bg-amber-500/10');
+                el.classList.add('border-slate-800');
+            }
+        });
+        const selectedEl = document.getElementById(`track-${id}`);
+        if (selectedEl) {
+            selectedEl.classList.remove('border-slate-800');
+            selectedEl.classList.add('border-amber-400', 'bg-amber-500/10');
+        }
+    };
+
+    window.triggerSpecialAbility = function triggerSpecialAbility() {
+        if (!isRacing || raceCountdown) return;
+
+        const now = performance.now() / 1000;
+        if (now - lastAbilityTime < selectedNinja.abilityCooldown) return;
+
+        lastAbilityTime = now;
+        playerKart.boostTimer = 3.5;
+        playerKart.speed = playerKart.maxSpeed * 1.55;
+
+        // Banner na HUD
+        const abBanner = document.getElementById('ability-banner');
+        abBanner.innerText = `${selectedNinja.abilityName.toUpperCase()} ATIVADO!`;
+        abBanner.classList.remove('hidden');
+        setTimeout(() => abBanner.classList.add('hidden'), 2000);
+
+        // Visual ring cooldown animation
+        const circle = document.getElementById('ability-cooldown-circle');
+        circle.style.transition = 'none';
+        circle.style.strokeDashoffset = '200';
+
+        setTimeout(() => {
+            circle.style.transition = `stroke-dashoffset ${selectedNinja.abilityCooldown}s linear`;
+            circle.style.strokeDashoffset = '0';
+        }, 50);
+    };
+
+    /* =========================================================================
+       INICIALIZAÇÃO DA UI
+       ========================================================================= */
+    window.addEventListener('DOMContentLoaded', () => {
+        renderMenuUI();
+        setupTouchEvents();
+        setupKeyboard();
+        initThreeJS();
+    });
+
+    function renderMenuUI() {
+        const ninjaGrid = document.getElementById('ninja-grid');
+        ninjaGrid.innerHTML = NINJAS.map(n => `
+            <div onclick="selectNinja('${n.id}')" id="card-${n.id}" class="ninja-card glass-panel p-3 rounded-2xl border-2 ${n.id === selectedNinja.id ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800'} cursor-pointer flex flex-col items-center text-center">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-2 text-white" style="background-color: ${n.hexColor};">
+                    <i class="fa-solid ${n.icon}"></i>
+                </div>
+                <span class="font-bangers text-lg text-amber-300 tracking-wider">${n.name}</span>
+                <span class="text-[10px] font-orbitron text-slate-400">${n.element}</span>
+            </div>
+        `).join('');
+
+        const trackGrid = document.getElementById('track-grid');
+        trackGrid.innerHTML = TRACKS.map(t => `
+            <div onclick="selectTrack('${t.id}')" id="track-${t.id}" class="glass-panel p-4 rounded-2xl border-2 ${t.id === selectedTrack.id ? 'border-amber-400 bg-amber-500/10' : 'border-slate-800'} cursor-pointer transition hover:border-amber-400/50">
+                <div class="flex justify-between items-start mb-1">
+                    <h4 class="font-bangers text-xl text-amber-300">${t.name}</h4>
+                    <span class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">${t.difficulty}</span>
+                </div>
+                <p class="text-xs text-slate-300 mb-2">${t.desc}</p>
+                <div class="text-[10px] font-orbitron text-slate-400 flex justify-between">
+                    <span><i class="fa-solid fa-location-dot text-amber-500 mr-1"></i>${t.location}</span>
+                    <span>${t.length}</span>
+                </div>
+            </div>
+        `).join('');
+
+        updateNinjaDetails();
+    }
+
+    function selectNinja(id) {
+        selectedNinja = NINJAS.find(n => n.id === id);
+        document.querySelectorAll('.ninja-card').forEach(el => {
+            el.classList.remove('border-amber-400', 'bg-amber-500/10');
+            el.classList.add('border-slate-800');
+        });
+        const card = document.getElementById(`card-${id}`);
+        if (card) {
+            card.classList.remove('border-slate-800');
+            card.classList.add('border-amber-400', 'bg-amber-500/10');
+        }
+        updateNinjaDetails();
+    }
+
+    function updateNinjaDetails() {
+        document.getElementById('char-name').innerText = selectedNinja.name;
+        document.getElementById('char-element').innerText = selectedNinja.element;
+        document.getElementById('char-desc').innerText = selectedNinja.desc;
+        document.getElementById('char-icon').className = `fa-solid ${selectedNinja.icon}`;
+        document.getElementById('char-icon-bg').style.backgroundColor = selectedNinja.hexColor;
+
+        document.getElementById('stat-speed').innerText = `${selectedNinja.stats.speed}%`;
+        document.getElementById('bar-speed').style.width = `${selectedNinja.stats.speed}%`;
+
+        document.getElementById('stat-accel').innerText = `${selectedNinja.stats.accel}%`;
+        document.getElementById('bar-accel').style.width = `${selectedNinja.stats.accel}%`;
+
+        document.getElementById('stat-handling').innerText = `${selectedNinja.stats.handling}%`;
+        document.getElementById('bar-handling').style.width = `${selectedNinja.stats.handling}%`;
+
+        document.getElementById('ability-icon').className = `fa-solid ${selectedNinja.icon} text-2xl sm:text-3xl text-amber-400`;
+    }
+
+    function selectTrack(id) {
+        selectedTrack = TRACKS.find(t => t.id === id);
+        TRACKS.forEach(t => {
+            const el = document.getElementById(`track-${t.id}`);
+            if (el) {
+                el.classList.remove('border-amber-400', 'bg-amber-500/10');
+                el.classList.add('border-slate-800');
+            }
+        });
+        const selectedEl = document.getElementById(`track-${id}`);
+        if (selectedEl) {
+            selectedEl.classList.remove('border-slate-800');
+            selectedEl.classList.add('border-amber-400', 'bg-amber-500/10');
+        }
+    }
+
+    /* =========================================================================
+       THREE.JS - CENÁRIO 3D & AMBIENTE
+       ========================================================================= */
+    function initThreeJS() {
+        const container = document.getElementById('canvas-container');
+        
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(selectedTrack.skyColor);
+        scene.fog = new THREE.FogExp2(selectedTrack.skyColor, 0.0025);
+
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        window.addEventListener('resize', onWindowResize);
+        animate();
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    /* =========================================================================
+       GERAÇÃO DE PISTAS & BARREIRAS FÍSICAS REFORÇADAS
+       ========================================================================= */
+    function buildTrackAndEnvironment() {
+        while(scene.children.length > 0){ 
+            scene.remove(scene.children[0]); 
+        }
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(100, 200, 100);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        scene.background = new THREE.Color(selectedTrack.skyColor);
+        scene.fog = new THREE.FogExp2(selectedTrack.skyColor, 0.0025);
+
+        // Gerar Waypoints Base da Pista
+        const rawWaypoints = generateTrackWaypoints(selectedTrack.id);
+        trackCurve = new THREE.CatmullRomCurve3(rawWaypoints, true, 'catmullrom', 0.15);
+        
+        // Alta densidade de pontos (400) para delimitação precisa das barreiras e IA suave
+        trackWaypoints = trackCurve.getSpacedPoints(400);
+
+        // Terreno Base
+        const groundGeo = new THREE.PlaneGeometry(1200, 1200);
+        const groundMat = new THREE.MeshStandardMaterial({ color: selectedTrack.groundColor, roughness: 0.9 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Construir Malha da Pista e Barreiras Laterais
+        buildTrackMeshAndBarriers();
+
+        // Linha de Largada
+        const startPt = trackWaypoints[0];
+        const nextPt = trackWaypoints[1];
+        const dir = new THREE.Vector3().subVectors(nextPt, startPt).normalize();
+
+        const finishGeo = new THREE.PlaneGeometry(trackWidth, 4);
+        const finishMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        const finishBanner = new THREE.Mesh(finishGeo, finishMat);
+        finishBanner.rotation.x = -Math.PI / 2;
+        finishBanner.position.copy(startPt);
+        finishBanner.position.y = 0.05;
+        finishBanner.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        scene.add(finishBanner);
+
+        // Decorações
+        addEnvironmentDecorations();
+    }
+
+    function generateTrackWaypoints(trackId) {
+        const points = [];
+
+        if (trackId === 'monastery') {
+            const count = 10;
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                let r = 140 + Math.sin(angle * 3) * 40;
+                points.push(new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r));
+            }
+        } else if (trackId === 'ninjagocity') {
+            points.push(new THREE.Vector3(0, 0, -150));
+            points.push(new THREE.Vector3(110, 0, -100));
+            points.push(new THREE.Vector3(140, 0, 0));
+            points.push(new THREE.Vector3(80, 0, 100));
+            points.push(new THREE.Vector3(-30, 0, 60));
+            points.push(new THREE.Vector3(-120, 0, 130));
+            points.push(new THREE.Vector3(-160, 0, 0));
+            points.push(new THREE.Vector3(-90, 0, -110));
+        } else {
+            const count = 12;
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                let r = 150 + (i % 2 === 0 ? 45 : -35);
+                points.push(new THREE.Vector3(Math.cos(angle) * r, 0, Math.sin(angle) * r));
+            }
+        }
+        return points;
+    }
+
+    function buildTrackMeshAndBarriers() {
+        const vertices = [];
+        const uvs = [];
+        const indices = [];
+
+        const halfWidth = trackWidth / 2;
+        const barrierHeight = 2.5;
+
+        const innerVerts = [];
+        const outerVerts = [];
+
+        for (let i = 0; i < trackWaypoints.length; i++) {
+            const p1 = trackWaypoints[i];
+            const p2 = trackWaypoints[(i + 1) % trackWaypoints.length];
+
+            const forward = new THREE.Vector3().subVectors(p2, p1).normalize();
+            const up = new THREE.Vector3(0, 1, 0);
+            const side = new THREE.Vector3().crossVectors(forward, up).normalize();
+
+            // Calcular bordas interna e externa
+            const leftPt = new THREE.Vector3().addVectors(p1, side.clone().multiplyScalar(halfWidth));
+            const rightPt = new THREE.Vector3().subVectors(p1, side.clone().multiplyScalar(halfWidth));
+
+            // Malha do asfalto
+            vertices.push(leftPt.x, leftPt.y, leftPt.z);
+            vertices.push(rightPt.x, rightPt.y, rightPt.z);
+
+            uvs.push(0, i / trackWaypoints.length);
+            uvs.push(1, i / trackWaypoints.length);
+
+            // Muros e Barreiras Físicas e Visuais nas Bordas
+            innerVerts.push(leftPt.x, leftPt.y, leftPt.z);
+            innerVerts.push(leftPt.x, leftPt.y + barrierHeight, leftPt.z);
+
+            outerVerts.push(rightPt.x, rightPt.y, rightPt.z);
+            outerVerts.push(rightPt.x, rightPt.y + barrierHeight, rightPt.z);
+        }
+
+        for (let i = 0; i < trackWaypoints.length; i++) {
+            const next = (i + 1) % trackWaypoints.length;
+            const i2 = i * 2;
+            const n2 = next * 2;
+
+            indices.push(i2, i2 + 1, n2);
+            indices.push(i2 + 1, n2 + 1, n2);
+        }
+
+        const trackGeo = new THREE.BufferGeometry();
+        trackGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        trackGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        trackGeo.setIndex(indices);
+        trackGeo.computeVertexNormals();
+
+        const trackMat = new THREE.MeshStandardMaterial({
+            color: selectedTrack.id === 'ninjagocity' ? 0x1e293b : 0x27272a,
+            roughness: 0.6
+        });
+
+        const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+        trackMesh.receiveShadow = true;
+        scene.add(trackMesh);
+
+        // Gerar barreiras visuais 3D
+        const barrierMat = new THREE.MeshStandardMaterial({
+            color: selectedTrack.barrierColor,
+            emissive: selectedTrack.barrierColor,
+            emissiveIntensity: 0.4,
+            roughness: 0.3
+        });
+
+        const generateBarrierMesh = (verts) => {
+            const bGeo = new THREE.BufferGeometry();
+            const bIndices = [];
+            for (let i = 0; i < trackWaypoints.length; i++) {
+                const next = (i + 1) % trackWaypoints.length;
+                const i2 = i * 2;
+                const n2 = next * 2;
+                bIndices.push(i2, i2 + 1, n2);
+                bIndices.push(i2 + 1, n2 + 1, n2);
+                bIndices.push(n2, i2 + 1, i2);
+                bIndices.push(n2, n2 + 1, i2 + 1);
+            }
+            bGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+            bGeo.setIndex(bIndices);
+            bGeo.computeVertexNormals();
+            return new THREE.Mesh(bGeo, barrierMat);
+        };
+
+        scene.add(generateBarrierMesh(innerVerts));
+        scene.add(generateBarrierMesh(outerVerts));
+    }
+
+    function addEnvironmentDecorations() {
+        const numObjects = 50;
+        for (let i = 0; i < numObjects; i++) {
+            const idx = Math.floor(Math.random() * trackWaypoints.length);
+            const pt = trackWaypoints[idx];
+
+            const offsetX = (Math.random() - 0.5) * 180 + (Math.random() > 0.5 ? 40 : -40);
+            const offsetZ = (Math.random() - 0.5) * 180 + (Math.random() > 0.5 ? 40 : -40);
+
+            const x = pt.x + offsetX;
+            const z = pt.z + offsetZ;
+
+            if (selectedTrack.id === 'monastery') {
+                const treeGroup = new THREE.Group();
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 6), new THREE.MeshStandardMaterial({color: 0x5c3d2e}));
+                trunk.position.y = 3;
+                treeGroup.add(trunk);
+
+                const leaves = new THREE.Mesh(new THREE.ConeGeometry(3.5, 8, 5), new THREE.MeshStandardMaterial({color: 0x15803d}));
+                leaves.position.y = 7;
+                treeGroup.add(leaves);
+
+                treeGroup.position.set(x, 0, z);
+                scene.add(treeGroup);
+            } else if (selectedTrack.id === 'ninjagocity') {
+                const h = 25 + Math.random() * 45;
+                const building = new THREE.Mesh(
+                    new THREE.BoxGeometry(14, h, 14),
+                    new THREE.MeshStandardMaterial({
+                        color: 0x0f172a,
+                        emissive: Math.random() > 0.5 ? 0x0284c7 : 0x06b6d4,
+                        emissiveIntensity: 0.3
+                    })
+                );
+                building.position.set(x, h / 2, z);
+                scene.add(building);
+            } else {
+                const rock = new THREE.Mesh(
+                    new THREE.DodecahedronGeometry(3 + Math.random() * 5),
+                    new THREE.MeshStandardMaterial({color: 0x262626, roughness: 0.9})
+                );
+                rock.position.set(x, 2, z);
+                scene.add(rock);
+            }
+        }
+    }
+
+    /* =========================================================================
+       CRIAÇÃO DOS KARTS
+       ========================================================================= */
+    function createKartMesh(colorHex) {
+        const kartGroup = new THREE.Group();
+
+        // Corpo Principal
+        const bodyGeo = new THREE.BoxGeometry(2.2, 0.7, 3.8);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.5, roughness: 0.3 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 0.6;
+        body.castShadow = true;
+        kartGroup.add(body);
+
+        // Capacete Ninja
+        const headGeo = new THREE.SphereGeometry(0.5, 16, 16);
+        const headMat = new THREE.MeshStandardMaterial({ color: colorHex });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.set(0, 1.2, -0.2);
+        head.castShadow = true;
+        kartGroup.add(head);
+
+        // Viseira
+        const visorGeo = new THREE.BoxGeometry(0.6, 0.2, 0.3);
+        const visorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
+        const visor = new THREE.Mesh(visorGeo, visorMat);
+        visor.position.set(0, 1.25, 0.25);
+        kartGroup.add(visor);
+
+        // Aerofólio
+        const wingGeo = new THREE.BoxGeometry(2.4, 0.1, 0.6);
+        const wingMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const wing = new THREE.Mesh(wingGeo, wingMat);
+        wing.position.set(0, 1.3, -1.6);
+        kartGroup.add(wing);
+
+        // Rodas
+        const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+
+        const wheelPositions = [
+            [-1.2, 0.4, 1.2],
+            [1.2, 0.4, 1.2],
+            [-1.2, 0.4, -1.2],
+            [1.2, 0.4, -1.2]
+        ];
+
+        wheelPositions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(...pos);
+            wheel.castShadow = true;
+            kartGroup.add(wheel);
+        });
+
+        return kartGroup;
+    }
+
+    function setupRaceEntities() {
+        if (playerKart) scene.remove(playerKart.mesh);
+        aiKarts.forEach(ai => scene.remove(ai.mesh));
+        aiKarts = [];
+
+        const startPos = trackWaypoints[0].clone();
+        const startDir = new THREE.Vector3().subVectors(trackWaypoints[1], trackWaypoints[0]).normalize();
+        const angle = Math.atan2(startDir.x, startDir.z);
+
+        // Kart Jogador
+        const pMesh = createKartMesh(selectedNinja.color);
+        scene.add(pMesh);
+
+        playerKart = {
+            mesh: pMesh,
+            ninja: selectedNinja,
+            pos: startPos.clone().add(new THREE.Vector3(-3, 0, 0)),
+            speed: 0,
+            maxSpeed: 0.88 + (selectedNinja.stats.speed / 200),
+            accel: 0.018 + (selectedNinja.stats.accel / 4500),
+            handling: 0.042 + (selectedNinja.stats.handling / 2200),
+            rotation: angle,
+            currentWaypoint: 0,
+            lap: 1,
+            progress: 0,
+            boostTimer: 0
+        };
+        playerKart.mesh.position.copy(playerKart.pos);
+        playerKart.mesh.rotation.y = playerKart.rotation;
+
+        // Karts da IA Inteligente
+        const otherNinjas = NINJAS.filter(n => n.id !== selectedNinja.id);
+        otherNinjas.forEach((ninja, index) => {
+            const aiMesh = createKartMesh(ninja.color);
+            scene.add(aiMesh);
+
+            const offsetSide = (index % 2 === 0 ? 1 : -1) * (3 + Math.random() * 2);
+            const offsetBack = - (Math.floor(index / 2) + 1) * 7;
+            const initialPos = startPos.clone().add(new THREE.Vector3(offsetSide, 0, offsetBack));
+
+            const aiObj = {
+                mesh: aiMesh,
+                ninja: ninja,
+                pos: initialPos,
+                speed: 0,
+                maxSpeed: 0.86 + (ninja.stats.speed / 200),
+                accel: 0.017 + (ninja.stats.accel / 4600),
+                handling: 0.055,
+                rotation: angle,
+                targetWaypointIdx: 6,
+                laneOffset: (Math.random() - 0.5) * 6, // Offset de faixa dinâmico para evitar fila indiana
+                lap: 1,
+                progress: 0,
+                boostTimer: 0,
+                abilityCooldownTimer: Math.random() * 4 + 2
+            };
+            aiObj.mesh.position.copy(aiObj.pos);
+            aiObj.mesh.rotation.y = aiObj.rotation;
+            aiKarts.push(aiObj);
+        });
+    }
+
+    /* =========================================================================
+       CONTROLES & EVENTOS
+       ========================================================================= */
+    function setupKeyboard() {
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+            if (e.code === 'KeyE') triggerSpecialAbility();
+        });
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+        });
+    }
+
+    function setupTouchEvents() {
+        const bindTouch = (id, key) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+        };
+
+        bindTouch('touch-left', 'ArrowLeft');
+        bindTouch('touch-right', 'ArrowRight');
+        bindTouch('touch-gas', 'ArrowUp');
+        bindTouch('touch-brake', 'ArrowDown');
+    }
+
+    function startCountdown() {
+        isRacing = false;
+        raceCountdown = true;
+        let count = 3;
+
+        const banner = document.getElementById('hud-banner');
+        banner.classList.remove('hidden');
+        banner.innerText = count;
+
+        const timer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                banner.innerText = count;
+            } else if (count === 0) {
+                banner.innerText = 'VAI!!!';
+            } else {
+                clearInterval(timer);
+                banner.classList.add('hidden');
+                raceCountdown = false;
+                isRacing = true;
+                raceStartTime = performance.now();
+            }
+        }, 1000);
+    }
+
+    /* =========================================================================
+       HABILIDADES ESPECIAIS
+       ========================================================================= */
+    function triggerSpecialAbility() {
+        if (!isRacing || raceCountdown) return;
+
+        const now = performance.now() / 1000;
+        if (now - lastAbilityTime < selectedNinja.abilityCooldown) return;
+
+        lastAbilityTime = now;
+        playerKart.boostTimer = 3.5;
+        playerKart.speed = playerKart.maxSpeed * 1.55;
+
+        // Banner na HUD
+        const abBanner = document.getElementById('ability-banner');
+        abBanner.innerText = `${selectedNinja.abilityName.toUpperCase()} ATIVADO!`;
+        abBanner.classList.remove('hidden');
+        setTimeout(() => abBanner.classList.add('hidden'), 2000);
+
+        // Visual ring cooldown animation
+        const circle = document.getElementById('ability-cooldown-circle');
+        circle.style.transition = 'none';
+        circle.style.strokeDashoffset = '200';
+
+        setTimeout(() => {
+            circle.style.transition = `stroke-dashoffset ${selectedNinja.abilityCooldown}s linear`;
+            circle.style.strokeDashoffset = '0';
+        }, 50);
+    }
+
+    /* =========================================================================
+       SISTEMA DE BARREIRAS FÍSICAS REFORÇADAS (IMPERMEÁVEL)
+       ========================================================================= */
+    function enforceTrackLimits(kart) {
+        // Encontrar o ponto mais próximo na linha central da pista (usando busca refinada)
+        let closestDistSq = Infinity;
+        let closestIdx = 0;
+
+        // Procurar ponto central mais próximo
+        const searchRange = 30;
+        const startSearch = Math.max(0, kart.currentWaypoint - searchRange);
+        const endSearch = Math.min(trackWaypoints.length, kart.currentWaypoint + searchRange);
+
+        for (let i = 0; i < trackWaypoints.length; i++) {
+            const dSq = kart.pos.distanceToSquared(trackWaypoints[i]);
+            if (dSq < closestDistSq) {
+                closestDistSq = dSq;
+                closestIdx = i;
+            }
+        }
+
+        const closestPt = trackWaypoints[closestIdx];
+        const nextPt = trackWaypoints[(closestIdx + 1) % trackWaypoints.length];
+
+        // Projetar a posição do kart no segmento da pista
+        const trackVector = new THREE.Vector3().subVectors(nextPt, closestPt).setY(0).normalize();
+        const kartVector = new THREE.Vector3().subVectors(kart.pos, closestPt).setY(0);
+
+        // Distância do kart ao centro perpendicular da pista
+        const projLength = kartVector.dot(trackVector);
+        const projPoint = closestPt.clone().add(trackVector.clone().multiplyScalar(projLength));
+        
+        const offsetVector = new THREE.Vector3().subVectors(kart.pos, projPoint).setY(0);
+        const distFromCenter = offsetVector.length();
+
+        // Se ultrapassar os limites da pista, clampar rigorosamente nas barreiras
+        if (distFromCenter > maxBoundaryDist) {
+            offsetVector.normalize().multiplyScalar(maxBoundaryDist);
+            kart.pos.copy(projPoint).add(offsetVector);
+            kart.speed *= 0.7; // Atrito / desaceleração ao bater na barreira
+        }
+
+        return closestIdx;
+    }
+
+    /* =========================================================================
+       FÍSICA DA CORRIDA E IA AVANÇADA
+       ========================================================================= */
+    function updatePhysics() {
+        if (!isRacing && !raceCountdown) return;
+
+        // --- ATUALIZAÇÃO DO JOGADOR ---
+        let isAccelerating = keys.ArrowUp || keys.KeyW;
+        let isBraking = keys.ArrowDown || keys.KeyS;
+        let isTurningLeft = keys.ArrowLeft || keys.KeyA;
+        let isTurningRight = keys.ArrowRight || keys.KeyD;
+
+        if (isRacing) {
+            if (isAccelerating) {
+                let topSpeed = playerKart.maxSpeed;
+                if (playerKart.boostTimer > 0) topSpeed *= 1.45;
+
+                if (playerKart.speed < topSpeed) {
+                    playerKart.speed += playerKart.accel;
+                }
+            } else if (isBraking) {
+                playerKart.speed -= playerKart.accel * 2.5;
+                if (playerKart.speed < -playerKart.maxSpeed * 0.3) {
+                    playerKart.speed = -playerKart.maxSpeed * 0.3;
+                }
+            } else {
+                playerKart.speed *= 0.96;
+            }
+
+            if (Math.abs(playerKart.speed) > 0.03) {
+                const dir = playerKart.speed > 0 ? 1 : -1;
+                if (isTurningLeft) playerKart.rotation += playerKart.handling * dir;
+                if (isTurningRight) playerKart.rotation -= playerKart.handling * dir;
+            }
+
+            if (playerKart.boostTimer > 0) {
+                playerKart.boostTimer -= 0.016;
+            }
+        }
+
+        // Movimentação do Jogador
+        playerKart.pos.x += Math.sin(playerKart.rotation) * playerKart.speed;
+        playerKart.pos.z += Math.cos(playerKart.rotation) * playerKart.speed;
+
+        // Delimitar Barreiras do Jogador
+        playerKart.currentWaypoint = enforceTrackLimits(playerKart);
+        playerKart.mesh.position.copy(playerKart.pos);
+        playerKart.mesh.rotation.y = playerKart.rotation;
+
+        // --- IA INTELIGENTE DOS ADVERSÁRIOS ---
+        aiKarts.forEach(ai => {
+            if (!isRacing) return;
+
+            // 1. Navegação de waypoints com antecipação (look-ahead)
+            let targetIdx = (ai.targetWaypointIdx) % trackWaypoints.length;
+            let targetPt = trackWaypoints[targetIdx].clone();
+
+            // Adicionar deslocamento lateral de faixa (evita colisão frontal em massa)
+            const forwardDir = new THREE.Vector3().subVectors(
+                trackWaypoints[(targetIdx + 1) % trackWaypoints.length],
+                trackWaypoints[targetIdx]
+            ).normalize();
+            const sideDir = new THREE.Vector3(-forwardDir.z, 0, forwardDir.x);
+            targetPt.add(sideDir.multiplyScalar(ai.laneOffset));
+
+            const distToTarget = ai.pos.distanceTo(targetPt);
+            if (distToTarget < 14) {
+                ai.targetWaypointIdx = (ai.targetWaypointIdx + 3) % trackWaypoints.length;
+                // Alternar suavemente a faixa de Ultrapassagem da IA
+                if (Math.random() < 0.2) {
+                    ai.laneOffset = (Math.random() - 0.5) * 7;
+                }
+            }
+
+            // 2. Cálculo da curva e frenagem inteligente em curvas fechadas
+            const dx = targetPt.x - ai.pos.x;
+            const dz = targetPt.z - ai.pos.z;
+            const targetAngle = Math.atan2(dx, dz);
+
+            let diffAngle = targetAngle - ai.rotation;
+            diffAngle = Math.atan2(Math.sin(diffAngle), Math.cos(diffAngle)); // Normalizar (-PI a PI)
+
+            // Ajuste suave de direção
+            ai.rotation += diffAngle * ai.handling;
+
+            // Reduzir velocidade ligeiramente se a curva for muito acentuada (Pilotagem realista)
+            let desiredSpeed = ai.maxSpeed;
+            if (Math.abs(diffAngle) > 0.6) {
+                desiredSpeed *= 0.75;
+            }
+
+            if (ai.boostTimer > 0) {
+                desiredSpeed *= 1.4;
+                ai.boostTimer -= 0.016;
+            }
+
+            // Controle de velocidade da IA
+            if (ai.speed < desiredSpeed) {
+                ai.speed += ai.accel;
+            } else {
+                ai.speed *= 0.97;
+            }
+
+            // 3. Uso automático da Habilidade Especial da IA
+            ai.abilityCooldownTimer -= 0.016;
+            if (ai.abilityCooldownTimer <= 0) {
+                ai.boostTimer = 2.5;
+                ai.abilityCooldownTimer = ai.ninja.abilityCooldown + Math.random() * 4;
+            }
+
+            // Movimentação da IA
+            ai.pos.x += Math.sin(ai.rotation) * ai.speed;
+            ai.pos.z += Math.cos(ai.rotation) * ai.speed;
+
+            // Barreiras estritas para a IA (Impede totalmente a IA de sair da pista)
+            ai.currentWaypoint = enforceTrackLimits(ai);
+            ai.mesh.position.copy(ai.pos);
+            ai.mesh.rotation.y = ai.rotation;
+        });
+
+        // Atualização de Voltas e Posições
+        updateLapProgress();
+
+        // Câmera Suave de Terceira Pessoa
+        const camOffset = new THREE.Vector3(
+            -Math.sin(playerKart.rotation) * 14,
+            6,
+            -Math.cos(playerKart.rotation) * 14
+        );
+        const targetCamPos = playerKart.pos.clone().add(camOffset);
+        camera.position.lerp(targetCamPos, 0.12);
+        camera.lookAt(playerKart.pos.clone().add(new THREE.Vector3(0, 1.5, 0)));
+
+        // Atualizar HUD e Minimapa
+        updateHUD();
+    }
+
+    /* =========================================================================
+       PROGRESSO DE VOLTAS
+       ========================================================================= */
+    function updateLapProgress() {
+        const allKarts = [playerKart, ...aiKarts];
+
+        allKarts.forEach(k => {
+            if (k.currentWaypoint > trackWaypoints.length - 25 && !k.passedHalf) {
+                k.passedHalf = true;
+            }
+
+            if (k.currentWaypoint < 15 && k.passedHalf) {
+                k.lap++;
+                k.passedHalf = false;
+                if (k === playerKart && k.lap > 3) {
+                    finishRace();
+                }
+            }
+
+            k.progress = (k.lap * 10000) + k.currentWaypoint;
+        });
+
+        allKarts.sort((a, b) => b.progress - a.progress);
+        const playerPos = allKarts.indexOf(playerKart) + 1;
+        document.getElementById('hud-position').innerText = playerPos;
+    }
+
+    /* =========================================================================
+       HUD E MINIMAPA
+       ========================================================================= */
+    function updateHUD() {
+        const speedKmh = Math.floor(Math.abs(playerKart.speed) * 150);
+        document.getElementById('hud-speed').innerText = speedKmh;
+        document.getElementById('hud-speed-bar').style.width = `${Math.min(100, (speedKmh / 140) * 100)}%`;
+
+        document.getElementById('hud-lap').innerText = Math.min(3, playerKart.lap);
+
+        if (isRacing) {
+            raceElapsedTime = (performance.now() - raceStartTime) / 1000;
+            const mins = Math.floor(raceElapsedTime / 60).toString().padStart(2, '0');
+            const secs = (raceElapsedTime % 60).toFixed(1).padStart(4, '0');
+            document.getElementById('hud-timer').innerText = `${mins}:${secs}`;
+        }
+
+        drawMinimap();
+    }
+
+    function drawMinimap() {
+        const canvas = document.getElementById('minimap-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const mapScale = 0.32;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Pista
+        ctx.beginPath();
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 6;
+        trackWaypoints.forEach((pt, i) => {
+            const x = centerX + pt.x * mapScale;
+            const y = centerY + pt.z * mapScale;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+        // Karts IA
+        aiKarts.forEach(ai => {
+            ctx.fillStyle = ai.ninja.hexColor;
+            ctx.beginPath();
+            ctx.arc(centerX + ai.pos.x * mapScale, centerY + ai.pos.z * mapScale, 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Kart Jogador
+        ctx.fillStyle = selectedNinja.hexColor;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(centerX + playerKart.pos.x * mapScale, centerY + playerKart.pos.z * mapScale, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /* =========================================================================
+       FIM DE CORRIDA
+       ========================================================================= */
+    function finishRace() {
+        isRacing = false;
+        const finalPos = document.getElementById('hud-position').innerText;
+        
+        document.getElementById('modal-pos').innerText = `${finalPos}º Lugar`;
+        document.getElementById('modal-time').innerText = document.getElementById('hud-timer').innerText;
+        document.getElementById('modal-char').innerText = selectedNinja.name;
+
+        const modal = document.getElementById('finish-modal');
+        modal.classList.remove('hidden');
+    }
+
+    /* =========================================================================
+       ANIMATION LOOP
+       ========================================================================= */
+    function animate() {
+        requestAnimationFrame(animate);
+        updatePhysics();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
